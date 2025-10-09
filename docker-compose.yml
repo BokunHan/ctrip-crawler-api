@@ -1,0 +1,30 @@
+services:
+  ctrip-crawler-api:
+    build: .
+    container_name: ctrip-crawler-api
+    ports:
+      - "18000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CHROME_BIN=/usr/bin/chromium
+      - CHROME_PATH=/usr/bin/chromium
+    volumes:
+      - ./logs:/app/logs
+      # 直接挂载源代码，支持热更新
+      - .:/app
+    restart: unless-stopped
+    # 使用默认的Dockerfile CMD，通过环境变量控制reload
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5' 
