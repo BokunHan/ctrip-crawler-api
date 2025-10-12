@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import sys
+import os
 import concurrent.futures
 from datetime import datetime
 from typing import Dict, Any, Optional
@@ -14,6 +15,7 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
+from pydantic import BaseModel, Field, HttpUrl
 
 # Windows环境下设置事件循环策略，解决异步冲突问题
 if sys.platform == "win32":
@@ -24,6 +26,8 @@ from ctrip_detail_crawler import crawl_and_extract_ctrip_data
 from ctrip_itinerary_crawler import extract_ctrip_itinerary
 from ctrip_booking_crawler import crawl_ctrip_booking_notes
 from ctrip_swiper_crawler import crawl_and_extract_swiper
+from ctrip_prices_crawler import crawl_and_extract_prices
+from ctrip_snapshot_itinerary_crawler import crawl_and_extract_snapshot
 
 
 
@@ -73,13 +77,17 @@ class BookingNoteResponse(BaseModel):
     booking_notes: dict
     metadata: dict
 
+class SnapshotRequest(BaseModel):
+    url: HttpUrl = Field(..., description="要爬取的携程产品快照页面的完整URL")
+
 def build_product_url(product_id: str, url_type: str) -> str:
     """根据产品ID和类型构建携程URL"""
     base_urls = {
         "detail": "https://m.ctrip.com/webapp/xtour/detail?rv=1&productid={}&productId={}&isRedirect=tour_h5",
         "itinerary": "https://m.ctrip.com/webapp/xtour/detailComplexRoute?ProductId={}&Alias=A",
         "booking_note": "https://m.ctrip.com/webapp/xtour/detail?rv=1&productid={}&productId={}&isRedirect=tour_h5",
-        "swiper": "https://m.ctrip.com/webapp/vacations/tour/detail_picture_list?productId={}"
+        "swiper": "https://m.ctrip.com/webapp/vacations/tour/detail_picture_list?productId={}",
+        "prices": "https://m.ctrip.com/webapp/xtour/detail?rv=1&productid={}&productId={}&isRedirect=tour_h5"
     }
 
     url_template = base_urls[url_type]
@@ -268,6 +276,76 @@ async def get_product_swiper(product_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
+
+
+@app.get("/api/prices/{product_id}", response_model=ApiResponse)
+async def get_product_prices(product_id: str):
+    """
+    获取商品近期的所有每日价格
+
+    Args:
+        product_id: 携程商品ID
+
+    Returns:
+        商品价格日历数据
+    """
+    try:
+        # 构建URL
+        url = build_product_url(product_id, "prices")
+
+        # 使用线程池执行爬虫函数
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            executor,
+            lambda: asyncio.run(crawl_and_extract_prices(url))
+        )
+
+        if result and result.get("success"):
+            return ApiResponse(
+                success=True,
+                message="获取商品价格日历成功",
+                data=result["data"],
+                timestamp=datetime.now().isoformat()
+            )
+        else:
+            error_message = result.get("error", "未知错误")
+            raise HTTPException(status_code=500, detail=f"价格日历数据爬取失败: {error_message}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
+
+
+@app.post("/api/snapshot_itinerary", response_model=ApiResponse)
+async def get_snapshot_itinerary(request: SnapshotRequest):
+    """
+    接收一个产品快照URL，爬取并返回结构化的行程数据
+    """
+    try:
+        # 直接使用请求中传递的URL
+        url = str(request.url)
+
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            executor,
+            # 注意：这里我们调用的是新脚本里的 crawl_and_extract_snapshot
+            lambda: asyncio.run(crawl_and_extract_snapshot(url))
+        )
+
+        if result and result.get("success"):
+            return ApiResponse(
+                success=True,
+                message="获取快照行程成功",
+                data=result.get("data"),
+                timestamp=datetime.now().isoformat()
+            )
+        else:
+            error_message = result.get("error", "未知错误")
+            raise HTTPException(status_code=500, detail=f"快照行程爬取失败: {error_message}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
+
+
 
 if __name__ == "__main__":
     uvicorn.run(
