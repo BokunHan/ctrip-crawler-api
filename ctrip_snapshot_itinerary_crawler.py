@@ -11,8 +11,11 @@ def extract_snapshot_itinerary(markdown_content, url):
     print("🎯 开始从markdown中提取快照行程...")
 
     data = {
+        "order_id": "",
+        "snapshot_id": "",
         "product_info": {
             "ctrip_id": "",
+            "product_id": "",
             "title": "",  # 将从内容中提取
             "sub_title": "",
             "duration": "",
@@ -25,6 +28,19 @@ def extract_snapshot_itinerary(markdown_content, url):
             "source_url": url
         }
     }
+
+    order_id_match = re.search(r'orderId=(\d+)', url)
+    if order_id_match:
+        data['order_id'] = order_id_match.group(1)
+        print(f"✅ 找到订单号: {data['order_id']}")
+    else:
+        print(f"❌ 未找到订单号，订单快照URL: {url}")
+        return data
+
+    snapshot_id_match = re.search(r'snapshotid=(.+?)&', url)
+    if snapshot_id_match:
+        data['snapshot_id'] = snapshot_id_match.group(1)
+        print(f"✅ 找到快照号: {data['snapshot_id']}")
 
     lines = markdown_content.split('\n')
     current_day_data = None
@@ -519,8 +535,6 @@ def create_scenic_activity(time_str, activity_type, lines, index):
         line = lines[i].strip()
         if not line:
             continue
-
-        print(line)
 
         # 如果遇到下一个时间活动，停止
         if re.match(r'^\d{2}:\d{2}\s*', line) or re.match(r'^(全天|上午|下午|晚上)\s*', line) or re.match(r'^#####\s*(.+)', line):
@@ -1052,11 +1066,12 @@ async def crawl_and_extract_snapshot(url):
                 // If height is the same and is a reasonable value, consider it stable
                 else if (currentHeight === lastHeight && currentHeight > window.innerHeight) {
                     stableChecks++;
-                    console.log(`Height is stable at ${currentHeight}px (check #${stableChecks})`);
+                    // console.log(`Height is stable at ${currentHeight}px (check #${stableChecks})`);
                 }
                 
                 // If the height has been stable for 5 checks, we are confident it's the final value.
                 if (stableChecks >= 5) {
+                    console.log(`Height is stable at ${currentHeight}px`);
                     clearInterval(discoveryTimer);
                     // --- START PHASE 2 ---
                     startScrolling(currentHeight);
