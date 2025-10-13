@@ -81,9 +81,9 @@ def extract_product_data_from_markdown(markdown_content):
         # 商品图特征：通常包含特定的尺寸参数，且在页面前部出现
         # 详情图特征：通常是.jpg格式，或者没有复杂的尺寸参数
         if url.endswith('.jpg'):
-            return False  # .jpg通常是详情图
+            return True  # .jpg通常是详情图
         if '_C_500_500_' in url or '_C_750_430_' in url or '_C_386_386_' in url:
-            return True   # 这些尺寸通常是商品展示图
+            return False   # 这些尺寸通常是商品展示图
         return False
     
     processed_images = set()  # 用于去重

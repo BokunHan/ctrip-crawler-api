@@ -13,15 +13,13 @@ def extract_snapshot_itinerary(markdown_content, url):
     data = {
         "order_id": "",
         "snapshot_id": "",
-        "product_info": {
-            "ctrip_id": "",
-            "product_id": "",
-            "title": "",  # 将从内容中提取
-            "sub_title": "",
-            "duration": "",
-            "total_days": 0,
-            "remarks": ""
-        },
+        "ctrip_id": "",
+        "product_id": "",
+        "title": "",  # 将从内容中提取
+        "sub_title": "",
+        "duration": "",
+        "total_days": 0,
+        "remarks": "",
         "itinerary": [],
         "metadata": {
             "extracted_at": datetime.now().isoformat(),
@@ -48,15 +46,15 @@ def extract_snapshot_itinerary(markdown_content, url):
     # 尝试提取ctrip_id
     for line in lines:
         if "编号" in line:
-            data["product_info"]["ctrip_id"] = line.split("：")[1].strip()
+            data["ctrip_id"] = line.split("：")[1].strip()
             break
 
     # 尝试提取title和sub_title
     for i, line in enumerate(lines):
         title_match = re.match(r'^#\s+(.+)$', line)
         if title_match:
-            data["product_info"]["title"] = title_match.group(1).strip()
-            data["product_info"]["sub_title"] = lines[i+1].strip()
+            data["title"] = title_match.group(1).strip()
+            data["sub_title"] = lines[i+1].strip()
             break
 
     for i, line in enumerate(lines):
@@ -75,7 +73,7 @@ def extract_snapshot_itinerary(markdown_content, url):
                 "day_title": "",
                 "activities": []
             }
-            data["product_info"]["total_days"] += 1
+            data["total_days"] += 1
 
             if i + 2 < len(lines):
                 current_day_data["day_title"] = lines[i + 2].strip()
@@ -97,9 +95,9 @@ def extract_snapshot_itinerary(markdown_content, url):
     if current_day_data:
         data["itinerary"].append(current_day_data)
 
-    data["product_info"]["duration"] = f"{data["product_info"]['total_days']}天"
+    data["duration"] = f"{data['total_days']}天"
 
-    print(f"✅ 快照行程提取完成！共找到 {data["product_info"]['total_days']} 天的行程。")
+    print(f"✅ 快照行程提取完成！共找到 {data['total_days']} 天的行程。")
     return data
 
 
