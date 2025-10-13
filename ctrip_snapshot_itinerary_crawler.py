@@ -542,11 +542,13 @@ def create_scenic_activity(time_str, activity_type, lines, index):
         duration_match = re.search(r'活动时间[:：]\s*约(\d+)小时', line)
         if duration_match:
             duration_hours = float(duration_match.group(1))
+            continue
 
         duration_match2 = re.search(r'活动时间[:：]\s*约(\d+)分钟', line)
         if duration_match2:
             minutes = int(duration_match2.group(1))
             duration_hours = minutes / 60
+            continue
 
         # image_url = ""
         # # 检查是否是图片链接
@@ -574,15 +576,14 @@ def create_scenic_activity(time_str, activity_type, lines, index):
             continue  # 处理完景点行，继续下一行
 
         urls = re.findall(r'!\[.*?\]\((.+?)\)', line)
-        if current_spot:
+        if urls and current_spot:
             for url in urls:
                 # 将提取到的图片URL添加到当前景点的images列表中
                 if url not in current_spot['images']:
                     current_spot['images'].append(url)
             continue  # 处理完图片行，继续下一行
 
-        if not re.search(r'活动时间[:：]\s*约(\d+)', line) and not re.search(r'^前往[:：]', line) and not line.startswith('!['):
-            remark_lines.append(line)
+        remark_lines.append(line)
 
     if remark_lines:
         remark = '\n'.join(remark_lines)
