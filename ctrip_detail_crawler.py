@@ -320,12 +320,13 @@ async def crawl_and_extract_ctrip_data(url):
     
     # 手机浏览器配置
     browser_config = BrowserConfig(
-        browser_type="chromium",
+        # browser_type="chromium",
         headless=True,
-        verbose=True,
-        viewport_width=375,
-        viewport_height=812,
-        user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
+        # verbose=True,
+        # viewport_width=375,
+        # viewport_height=812,
+        # user_agent="Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
+        extra_args=['--disable-web-security']
     )
     
     # 爬取配置 - 针对手机版优化
@@ -333,7 +334,7 @@ async def crawl_and_extract_ctrip_data(url):
         cache_mode=CacheMode.BYPASS,
         delay_before_return_html=8,  # 减少固定等待时间：10秒 -> 3秒
         page_timeout=30000,  # 减少超时时间：60秒 -> 30秒
-        js_code=[
+        js_code=
             # 手机版滑动脚本 - 优化版本
             """
             // 手机版页面滑动加载 - 性能优化版
@@ -343,18 +344,18 @@ async def crawl_and_extract_ctrip_data(url):
                 let scrollDelay = 500;  // 减少滑动延迟：800ms -> 500ms
                 let maxScrolls = 15;  // 限制最大滑动次数，避免无限滚动
                 let scrollCount = 0;
-                
+
                 console.log('开始优化滑动加载...');
-                
+
                 while (totalHeight < document.body.scrollHeight && scrollCount < maxScrolls) {
                     let beforeHeight = document.body.scrollHeight;
                     window.scrollBy(0, distance);
                     totalHeight += distance;
                     scrollCount++;
-                    
+
                     // 动态调整等待时间
                     await new Promise(resolve => setTimeout(resolve, scrollDelay));
-                    
+
                     // 检查是否有新内容加载
                     let afterHeight = document.body.scrollHeight;
                     if (afterHeight === beforeHeight) {
@@ -362,24 +363,23 @@ async def crawl_and_extract_ctrip_data(url):
                         console.log('页面内容已全部加载，提前结束滚动');
                         break;
                     }
-                    
+
                     // 如果连续3次滚动都没有新内容，则结束
                     if (totalHeight >= afterHeight) {
                         console.log('已滚动到页面底部');
                         break;
                     }
                 }
-                
+
                 console.log(`滚动完成，共滚动${scrollCount}次`);
-                
+
                 // 滚动到顶部，减少等待时间
                 window.scrollTo(0, 0);
                 await new Promise(resolve => setTimeout(resolve, 500));  // 减少等待：1000ms -> 500ms
             }
-            
+
             await mobileScrollOptimized();
             """
-        ]
     )
     
     async with AsyncWebCrawler(config=browser_config) as crawler:
@@ -387,7 +387,7 @@ async def crawl_and_extract_ctrip_data(url):
         
         result = await crawler.arun(
             url=url,
-            config=crawler_config
+            config=crawler_config,
         )
         
         if result.success:
