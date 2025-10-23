@@ -36,6 +36,9 @@ def extract_product_data_from_markdown(markdown_content):
     }
     
     lines = markdown_content.split('\n')
+
+    title_pattern = r'.+\+.+\+.+私家团'
+    subtitle_pattern = r'.+·.+·.+'
     
     # 1. 提取商品ID和标题
     for i, line in enumerate(lines):
@@ -46,17 +49,21 @@ def extract_product_data_from_markdown(markdown_content):
                 product_data["product_id"] = match.group(1)
         
         # 提取标题 (通常是第一个较长的文本行)
-        if not product_data["title"] and len(line.strip()) > 20 and '拉萨' in line and '私家团' in line:
-            product_data["title"] = line.strip()
-            # 寻找真正的副标题（景点列表）
-            for j in range(i + 1, min(i + 10, len(lines))):
-                next_line = lines[j].strip()
-                # 副标题通常包含景点名称，用·分隔
-                if next_line and '·' in next_line and len(next_line) > 30:
-                    # 检查是否包含景点关键词
-                    if any(keyword in next_line for keyword in ['羊卓雍错', '珠峰', '陈塘沟', '卡若拉', '白居寺']):
-                        product_data["subtitle"] = next_line
-                        break
+        if not product_data["title"] and len(line.strip()) > 20:
+            match = re.search(title_pattern, line)
+            if match:
+                product_data["title"] = line.strip()
+                # 寻找真正的副标题（景点列表）
+                for j in range(i + 1, min(i + 10, len(lines))):
+                    next_line = lines[j].strip()
+                    # 副标题通常包含景点名称，用·分隔
+                    if next_line and '·' in next_line and len(next_line) > 20:
+                        match = re.search(subtitle_pattern, next_line)
+                        if match:
+                        # # 检查是否包含景点关键词
+                        # if any(keyword in next_line for keyword in ['羊卓雍错', '珠峰', '陈塘沟', '卡若拉', '白居寺']):
+                            product_data["subtitle"] = next_line
+                            break
     
     # 2. 提取价格信息
     price_pattern = r'¥(\d+)'
