@@ -37,8 +37,8 @@ def extract_product_data_from_markdown(markdown_content):
     
     lines = markdown_content.split('\n')
 
-    title_pattern = r'.+\+.+\+.+私家团'
-    subtitle_pattern = r'.+·.+·.+'
+    title_pattern = r'.+\+.+私家团'
+    subtitle_pattern = r'.+·.+'
     
     # 1. 提取商品ID和标题
     for i, line in enumerate(lines):
@@ -49,15 +49,15 @@ def extract_product_data_from_markdown(markdown_content):
                 product_data["product_id"] = match.group(1)
         
         # 提取标题 (通常是第一个较长的文本行)
-        if not product_data["title"] and len(line.strip()) > 20:
-            match = re.search(title_pattern, line)
+        if not product_data["title"] and '+' in line:
+            match = re.search(title_pattern, line.strip())
             if match:
                 product_data["title"] = line.strip()
                 # 寻找真正的副标题（景点列表）
                 for j in range(i + 1, min(i + 10, len(lines))):
                     next_line = lines[j].strip()
                     # 副标题通常包含景点名称，用·分隔
-                    if next_line and '·' in next_line and len(next_line) > 20:
+                    if next_line and '·' in next_line:
                         match = re.search(subtitle_pattern, next_line)
                         if match:
                         # # 检查是否包含景点关键词
@@ -80,17 +80,19 @@ def extract_product_data_from_markdown(markdown_content):
     def remove_size_params(url):
         """去掉图片URL中的尺寸参数，获取大图"""
         # 去掉 _C_数字_数字_R1_Q80 这样的尺寸参数
-        url = re.sub(r'_C_\d+_\d+_R1_Q80', '', url)
+        url = re.sub(r'_[A-Za-z]_\d+_\d+(_R\d+_Q\d+)?', '', url)
         return url
     
     def is_detail_image(url):
         """判断是否为商品展示图"""
         # 商品图特征：通常包含特定的尺寸参数，且在页面前部出现
         # 详情图特征：通常是.jpg格式，或者没有复杂的尺寸参数
+        size_pattern = r'_[A-Za-z]_\d+_\d+'
+        size_match = re.search(size_pattern, url)
+        if size_match:
+            return False
         if url.endswith('.jpg'):
             return True  # .jpg通常是详情图
-        if '_C_500_500_' in url or '_C_750_430_' in url or '_C_386_386_' in url:
-            return False   # 这些尺寸通常是商品展示图
         return False
     
     processed_images = set()  # 用于去重
@@ -414,8 +416,6 @@ async def crawl_and_extract_ctrip_data(url):
             # with open(markdown_file, 'w', encoding='utf-8') as f:
             #     f.write(result.markdown)
             # print(f"📝 Markdown文件已保存: {markdown_file}")
-
-            print(f"RESULT.MARKDOWN: {result.markdown}")
             
             # 提取结构化数据
             print("🎯 开始提取结构化数据...")
