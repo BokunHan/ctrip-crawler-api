@@ -22,9 +22,9 @@ def extract_swiper_from_markdown(markdown_content, url=""):
     cleaned_urls = set()
     for img_url in image_urls:
         # 移除常见的缩略图/尺寸参数
-        cleaned_url = re.sub(r'_R_\d+_\d+.*\.jpg', '.jpg', img_url)
-        cleaned_url = re.sub(r'_C_\d+_\d+.*\.jpg', '.jpg', cleaned_url)
-        cleaned_url = re.sub(r'_W_\d+_\d+.*\.jpg', '.jpg', cleaned_url)
+        cleaned_url = re.sub(r'_R_\d+_\d+.*\.', '.', img_url)
+        cleaned_url = re.sub(r'_C_\d+_\d+.*\.', '.', cleaned_url)
+        cleaned_url = re.sub(r'_W_\d+_\d+.*\.', '.', cleaned_url)
         cleaned_urls.add(cleaned_url)
 
     print(f"✅ 提取完成！共找到 {len(cleaned_urls)} 张不重复的图片。")

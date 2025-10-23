@@ -76,7 +76,7 @@ def extract_product_data_from_markdown(markdown_content):
         url = re.sub(r'_C_\d+_\d+_R1_Q80', '', url)
         return url
     
-    def is_product_image(url):
+    def is_detail_image(url):
         """判断是否为商品展示图"""
         # 商品图特征：通常包含特定的尺寸参数，且在页面前部出现
         # 详情图特征：通常是.jpg格式，或者没有复杂的尺寸参数
@@ -95,15 +95,15 @@ def extract_product_data_from_markdown(markdown_content):
                 continue
             processed_images.add(original_url)
             
-            if is_product_image(original_url):
+            if is_detail_image(original_url):
+                # 详情图：保持原尺寸
+                if original_url not in product_data["detail_images"]:
+                    product_data["detail_images"].append(original_url)
+            else:
                 # 商品图：去掉尺寸参数保存大图
                 large_url = remove_size_params(original_url)
                 if large_url not in product_data["product_images"]:
                     product_data["product_images"].append(large_url)
-            else:
-                # 详情图：保持原尺寸
-                if original_url not in product_data["detail_images"]:
-                    product_data["detail_images"].append(original_url)
     
     # 4. 提取线路总览信息 - 完整优化版本
     overview_section = False
