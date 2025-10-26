@@ -17,6 +17,7 @@ def extract_product_data_from_markdown(markdown_content):
         "subtitle": "",
         "route_title": "",
         "route_overview": {
+            "flight": "",
             "accommodation": "",
             "activities": "",
             "meals": ""
@@ -64,7 +65,9 @@ def extract_product_data_from_markdown(markdown_content):
                         next_line = lines[k].strip()
                         if not next_line:
                             continue
-                        if "住" in next_line:
+                        if "飞" in next_line:
+                            product_data["route_overview"]["flight"] = lines[k + 1]
+                        elif "住" in next_line:
                             product_data["route_overview"]["accommodation"] = lines[k + 1]
                         elif "游" in next_line:
                             product_data["route_overview"]["activities"] = lines[k + 1]
