@@ -15,6 +15,12 @@ def extract_product_data_from_markdown(markdown_content):
         "product_id": "",
         "title": "",
         "subtitle": "",
+        "route_title": "",
+        "route_overview": {
+            "accommodation": "",
+            "activities": "",
+            "meals": ""
+        },
         "price": "",
         "product_images": [],  # 商品展示图（去掉尺寸参数的大图）
         "detail_images": [],   # 详情介绍图（保持原尺寸）
@@ -36,6 +42,35 @@ def extract_product_data_from_markdown(markdown_content):
     }
     
     lines = markdown_content.split('\n')
+
+    # 0. 提取线路字母，并提取线路标题和概述
+    route_letter_pattern = r'([A-Z])线'
+    for i, line in enumerate(lines):
+        line = line.strip()
+        if not line:
+            continue
+
+        match = re.search(route_letter_pattern, line)
+        if match:
+            route_letter = match.group(1)
+            for j in range(i + 1, len(lines)):
+                next_line = lines[j].strip()
+                if not next_line:
+                    continue
+
+                if next_line.startswith(f'{route_letter}线|'):
+                    product_data["route_title"] = next_line
+                    for k in range(j + 1, len(lines)):
+                        next_line = lines[k].strip()
+                        if not next_line:
+                            continue
+                        if "住" in next_line:
+                            product_data["route_overview"]["accommodation"] = lines[k + 1]
+                        elif "游" in next_line:
+                            product_data["route_overview"]["activities"] = lines[k + 1]
+                        elif "餐" in next_line:
+                            product_data["route_overview"]["meals"] = lines[k + 1]
+                            break
 
     title_pattern = r'.+\+.+私家团'
     subtitle_pattern = r'.+·.+'
@@ -123,7 +158,7 @@ def extract_product_data_from_markdown(markdown_content):
     meals_info_parts = []  # 用于收集餐食的完整信息
     
     for i, line in enumerate(lines):
-        if '线路总览' in line:
+        if '线总览' in line:
             overview_section = True
             continue
         
@@ -274,7 +309,7 @@ def extract_product_data_from_markdown(markdown_content):
             
         if features_section and line.strip() and not line.startswith('!['):
             # 特色通常以关键词开头，如"大牌驾到"、"精选酒店"等
-            if any(keyword in line for keyword in ['大牌驾到', '精选酒店', '服务保障', '独特', '精选', '保障']):
+            if any(keyword in line for keyword in ['大牌驾到', '精选酒店', '服务保障', '独特', '精选', '保障', '首选', '度假']):
                 product_data["features"].append(line.strip())
     
     # 6. 提取费用信息 - 优化版本

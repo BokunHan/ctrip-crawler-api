@@ -28,7 +28,7 @@ from ctrip_booking_crawler import crawl_ctrip_booking_notes
 from ctrip_swiper_crawler import crawl_and_extract_swiper
 from ctrip_prices_crawler import crawl_and_extract_prices
 from ctrip_snapshot_itinerary_crawler import crawl_and_extract_snapshot
-
+from ctrip_routeId_crawler import crawl_and_extract_route_ids
 
 
 # 创建 FastAPI 应用
@@ -87,7 +87,8 @@ def build_product_url(product_id: str, url_type: str) -> str:
         "itinerary": "https://m.ctrip.com/webapp/xtour/detailComplexRoute?ProductId={}&Alias=A",
         "booking_note": "https://m.ctrip.com/webapp/xtour/detail?rv=1&productid={}&productId={}&isRedirect=tour_h5",
         "swiper": "https://m.ctrip.com/webapp/vacations/tour/detail_picture_list?productId={}",
-        "prices": "https://m.ctrip.com/webapp/xtour/detail?rv=1&productid={}&productId={}&isRedirect=tour_h5"
+        "prices": "https://m.ctrip.com/webapp/xtour/detail?rv=1&productid={}&productId={}&isRedirect=tour_h5",
+        "route_ids": "https://m.ctrip.com/webapp/xtour/detail?rv=1&productid={}&productId={}&isRedirect=tour_h5"
     }
 
     url_template = base_urls[url_type]
@@ -117,7 +118,8 @@ async def root():
             "endpoints": [
                 "/api/detail/{product_id}",
                 "/api/itinerary/{product_id}",
-                "/api/booking_note/{product_id}"
+                "/api/booking_note/{product_id}",
+                "/api/route_ids/{product_id}"
             ]
         },
         timestamp=datetime.now().isoformat()
@@ -345,6 +347,42 @@ async def get_snapshot_itinerary(request: SnapshotRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
+
+@app.get("/api/route_ids/{product_id}", response_model=ApiResponse)
+async def get_product_route_ids(product_id: str):
+    """
+    获取商品详情页面中所有的 multiRouteId_xxxxxxxx 的id
+
+    Args:
+        product_id: 携程商品ID
+
+    Returns:
+        一个包含所有不重复 route ID 的列表
+    """
+    try:
+        # 构建URL
+        url = build_product_url(product_id, "route_ids")
+
+        # 使用线程池执行爬虫函数
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(
+            executor,
+            lambda: asyncio.run(crawl_and_extract_route_ids(url))
+        )
+
+        if result and result.get("success"):
+            return ApiResponse(
+                success=True,
+                message="获取 Route IDs 成功",
+                data=result["data"],
+                timestamp=datetime.now().isoformat()
+            )
+        else:
+            error_message = result.get("error", "未知错误")
+            raise HTTPException(status_code=500, detail=f"Route IDs 数据爬取失败: {error_message}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"服务器内部错误: {str(e)}")
 
 
 if __name__ == "__main__":
