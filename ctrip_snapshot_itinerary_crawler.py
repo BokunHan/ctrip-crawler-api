@@ -424,7 +424,7 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
             standard = line.strip()
 
         # 提取备注信息
-        if not line.startswith('![') and not re.match(r'^\d{2}:\d{2}\s*', line) and not re.match(r'^(全天|上午|下午|晚上)\s*', line) and not re.match(r'(.*)(用餐时间[:：]|成人[:：]|前往餐厅[:：]|餐标)(.*)', line):
+        if not line.startswith('![') and not re.match(r'^\d{2}:\d{2}\s*', line) and not re.match(r'^(全天|上午|下午|晚上)\s*', line) and not re.match(r'(.*)(用餐时间[:：]约|成人[:：]|前往餐厅[:：]|餐标[:：])(.*)', line) and len(line) > 30:
             remark_lines.append(line)
 
     if remark_lines:
