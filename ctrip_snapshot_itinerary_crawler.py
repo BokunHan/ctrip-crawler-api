@@ -41,6 +41,10 @@ def extract_snapshot_itinerary(markdown_content, url):
         print(f"✅ 找到快照号: {data['snapshot_id']}")
 
     lines = markdown_content.split('\n')
+
+    # for line in lines:
+    #     print(line)
+
     current_day_data = None
 
     # 尝试提取ctrip_id
@@ -127,7 +131,7 @@ def parse_activity_line(line, lines, index, day_title):
         elif '景点' in activity_type or '场馆' in activity_type:
             return create_scenic_activity(time_str, activity_type, lines, index)
         elif '酒店' in activity_type:
-            return create_hotel_activity(time_str, activity_type, day_title, lines, index)
+            return create_hotel_activity(time_str, activity_type, day_title, lines, index+1)
         else:
             # 其他类型的活动（如其他、购物等）
             return create_other_activity(time_str, activity_type, lines, index)
@@ -347,6 +351,11 @@ def create_assembly_activity(lines):
         }
     }
 
+def remove_size_params(url):
+    """去掉图片URL中的尺寸参数，获取大图"""
+    # 去掉 _C_数字_数字_R1_Q80 这样的尺寸参数
+    url = re.sub(r'_[A-Za-z]_\d+_\d+(_R\d+_Q\d+)?', '', url)
+    return url
 
 def create_restaurant_activity(time_str, activity_type, extra_info, lines, index):
     """创建餐厅活动"""
@@ -358,12 +367,16 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
     elif "晚餐" in activity_type:
         meal_type = "晚餐"
 
+    location = ""
+
     # 从extra_info判断是否包含
     # included = "含餐" in extra_info or "含" in extra_info
     # if "自理" in extra_info:
     #     included = False
     adult_included = False
     child_included = False
+    standard = ""
+    images = []
 
     # 获取下一行的详细信息
     remark = ""
@@ -399,8 +412,19 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
         if re.search(r'儿童[:：]含餐', line):
             child_included = True
 
+        if re.search(r'前往餐厅[:：]', line):
+            location = line.strip()
+
+        if line.startswith("!["):
+            image_pattern = r'\((.*?)\)'
+            image_urls = re.findall(image_pattern, line)
+            images = [remove_size_params(url) for url in image_urls]
+
+        if re.search("餐标[:：]", line):
+            standard = line.strip()
+
         # 提取备注信息
-        if not line.startswith('![') and not re.match(r'^\d{2}:\d{2}\s*', line) and not re.match(r'^(全天|上午|下午|晚上)\s*', line) and not re.match(r'(.*)(含餐|自理|用餐时间)(.*)', line):
+        if not line.startswith('![') and not re.match(r'^\d{2}:\d{2}\s*', line) and not re.match(r'^(全天|上午|下午|晚上)\s*', line) and not re.match(r'(.*)(用餐时间[:：]|成人[:：]|前往餐厅[:：]|餐标)(.*)', line):
             remark_lines.append(line)
 
     if remark_lines:
@@ -420,11 +444,14 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
         "driving_duration_minutes": 0,
         "elementData": {
             "name": meal_type,
+            "location": location,
             "meal_type": meal_type,
             "adult_included": adult_included,
             "adult_fee_type": "费用包含" if adult_included else "自理",
             "child_included": child_included,
             "child_fee_type": "费用包含" if child_included else "自理",
+            "standard": standard,
+            "images": images,
             "remark": remark
         }
     }
@@ -619,37 +646,17 @@ def create_hotel_activity(time_str, activity_type, day_title, lines, index):
     hotel_image = ""  # 只保存一张图片
     alternative_hotels = []
 
-    hotel_match = re.search(r'🏨【酒店】(.+)', day_title)
-    if hotel_match:
-        hotel_name = hotel_match.group(1).strip()
-        location = hotel_name
-
     # 查找酒店详细信息
     i = index + 1
-    in_hotel_block = False
-    current_hotel = None
-    remark = "温馨提示：本产品指定入住当地精选酒店，酒店房型以实际安排为准。"
+    remark_lines = []
+    remark = ""
 
-    # 向前查找是否有图片（有时图片在酒店活动之前）
-    j = index - 1
-    while j >= 0 and j >= index - 5:  # 限制向前查找范围
-        prev_line = lines[j].strip()
-        if prev_line.startswith('![](') and prev_line.endswith(')'):
-            # 提取图片URL
-            image_url = prev_line[4:-1]  # 去掉 ![](  和  )
-
-            # 过滤掉图标类型的链接
-            if "activetype" not in image_url:
-                # 处理图片链接，移除尺寸参数
-                if image_url.startswith("@"):
-                    image_url = image_url[1:]  # 移除@前缀
-
-                if "_R_" in image_url:
-                    image_url = re.sub(r'_R_\d+_\d+\.jpg', '.jpg', image_url)
-
-                hotel_image = image_url
-                break
-        j -= 1
+    if "或" in lines[i]:
+        hotels = lines[i].split('或')
+        hotel_name = hotels[0]
+        alternative_hotels = hotels[1:]
+    else:
+        hotel_name = lines[i].strip()
 
     while i < len(lines):
         i += 1
@@ -688,66 +695,14 @@ def create_hotel_activity(time_str, activity_type, day_title, lines, index):
                     image_url = re.sub(r'_R_\d+_\d+\.jpg', '.jpg', image_url)
 
                 hotel_image = image_url
+            break
 
-        # 检查是否是自选酒店提示
-        elif "自选酒店" in line:
-            hotel_name = "自选酒店"
+        remark_lines.append(line)
 
-        # 检查是否是酒店名称（带有">"符号的行通常是酒店名称）
-        elif ">" in line and not line.startswith("!["):
-            hotel_parts = line.split(">")
-            if len(hotel_parts) > 0:
-                current_hotel = hotel_parts[0].strip()
-                if not hotel_name or hotel_name == "当地精选酒店" or hotel_name == "自选酒店":
-                    hotel_name = current_hotel
-                else:
-                    alternative_hotels.append(current_hotel)
-                in_hotel_block = True
-
-        # 提取酒店名称（双星号包围的文本通常是酒店名称）
-        elif "**" in line:
-            hotel_name_match = re.search(r'\*\*(.+?)\*\*', line)
-            if hotel_name_match:
-                extracted_name = hotel_name_match.group(1).strip()
-                if not hotel_name or hotel_name == "当地精选酒店" or hotel_name == "自选酒店":
-                    hotel_name = extracted_name
-                else:
-                    alternative_hotels.append(extracted_name)
-
-        # 提取酒店评分
-        elif in_hotel_block and re.search(r'\d+\.\d+分', line):
-            hotel_rating = re.search(r'(\d+\.\d+)分', line).group(1)
-
-        # 提取酒店地址
-        elif in_hotel_block and ("距" in line or "km" in line.lower() or "公里" in line):
-            hotel_address = line
-            if not location:
-                location = line
-
-        # 提取酒店地址（非酒店块内）
-        elif ("距" in line and "公里" in line) or ("距" in line and "km" in line.lower()):
-            hotel_address = line
-            if not location:
-                location = line
-
-        # 检查是否是备选酒店
-        elif line.startswith("或") and "酒店" in line:
-            alt_hotel = line.replace("或", "").strip()
-            alternative_hotels.append(alt_hotel)
-
-        # 提取酒店备注
-        elif "温馨提示" in line or "注意" in line:
-            # 使用原来的方法提取备注，但过滤掉DAY之后的文字
-            full_remark = line
-
-            # 检查备注中是否包含DAY
-            day_match = re.search(r'(Day\s*)', full_remark)
-            if day_match:
-                # 如果包含DAY，只保留DAY之前的部分
-                full_remark = full_remark.split(day_match.group(1))[0].strip()
-
-            remark = full_remark
-
+    if len(remark_lines) == 0:
+        remark = "温馨提示：本产品指定入住当地精选酒店，酒店房型以实际安排为准。"
+    else:
+        remark = "\n".join(remark_lines)
 
     return {
         "elementType": "hotel",
