@@ -375,7 +375,6 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
     #     included = False
     adult_included = False
     child_included = False
-    standard = ""
     images = []
 
     # 获取下一行的详细信息
@@ -412,8 +411,8 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
         if re.search(r'儿童[:：]含餐', line):
             child_included = True
 
-        if re.search(r'前往餐厅[:：]', line):
-            location = line.strip()
+        # if re.search(r'前往餐厅[:：]', line):
+        #     location = line.strip()
 
         if line.startswith("!["):
             image_pattern = r'\((.*?)\)'
@@ -424,7 +423,7 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
             standard = line.strip()
 
         # 提取备注信息
-        if not line.startswith('![') and not re.match(r'^\d{2}:\d{2}\s*', line) and not re.match(r'^(全天|上午|下午|晚上)\s*', line) and not re.match(r'(.*)(用餐时间[:：]约|成人[:：]|前往餐厅[:：]|餐标[:：])(.*)', line) and len(line) > 30:
+        if not line.startswith('![') and not re.match(r'^\d{2}:\d{2}\s*', line) and not re.match(r'^(全天|上午|下午|晚上)\s*', line) and not re.match(r'(.*)(成人[:：])(.*)', line) and len(line) > 30:
             remark_lines.append(line)
 
     if remark_lines:
@@ -444,13 +443,11 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
         "driving_duration_minutes": 0,
         "elementData": {
             "name": meal_type,
-            "location": location,
             "meal_type": meal_type,
             "adult_included": adult_included,
             "adult_fee_type": "费用包含" if adult_included else "自理",
             "child_included": child_included,
             "child_fee_type": "费用包含" if child_included else "自理",
-            "standard": standard,
             "images": images,
             "remark": remark
         }

@@ -471,6 +471,8 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
     included = "含餐" in extra_info or "含" in extra_info
     if "自理" in extra_info:
         included = False
+
+    standard = 0
     
     # 获取下一行的详细信息
     remark = "敬请自理"
@@ -498,10 +500,22 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
             continue
             
         # 提取用餐时间
-        duration_match = re.search(r'用餐时间[:：]\s*约(\d+)分钟', line)
+        duration_match = re.search(r'用餐时间[:：]\s*约(\d+)小时', line)
         if duration_match:
-            minutes = int(duration_match.group(1))
+            duration_hours = float(duration_match.group(1))
+            i += 1
+            continue
+
+        duration_match2 = re.search(r'用餐时间[:：]\s*约(\d+)分钟', line)
+        if duration_match2:
+            minutes = int(duration_match2.group(1))
             duration_hours = minutes / 60
+            i += 1
+            continue
+
+        standard_match = re.search(r'餐标[:：]\s*(\d+)\s*.+人$', line)
+        if standard_match:
+            standard = int(standard_match.group(1))
             i += 1
             continue
         
@@ -535,6 +549,7 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
             "adult_fee_type": "费用包含" if included else "自理",
             "child_included": included,
             "child_fee_type": "费用包含" if included else "自理",
+            "standard": standard,
             "images": images,
             "remark": remark
         }
