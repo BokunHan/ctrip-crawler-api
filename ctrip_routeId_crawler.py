@@ -8,6 +8,7 @@ def extract_route_ids_from_html(html_content, url=""):
     """
     从HTML内容中提取所有的 multiRouteId_xxxxxxxx 的id
     """
+    # print(html_content)
     print("🎯 开始从HTML中提取 route IDs...")
 
     # 尝试从URL中解析product_id
@@ -26,9 +27,32 @@ def extract_route_ids_from_html(html_content, url=""):
 
     print(f"✅ 提取完成！共找到 {len(route_ids_list)} 个不重复的 Route ID。")
 
+    a_route_pattern = re.compile(
+        # 1. 查找ID并捕获
+        r'multiRouteId_(\d+)'
+        # 2. 非贪婪地匹配所有中间内容
+        r'.*?'
+        # 3. 匹配那个包含 "A线" 描述的span标签
+        r'<span class="[^"]*MultiRouteDescription_New[^"]*"[^>]*>'
+        # 4. 匹配标签后的任何空格（包括换行符）
+        r'\s*'
+        # 5. 匹配以 "A线" 开头的文本
+        r'A线',
+        re.DOTALL | re.IGNORECASE  # re.DOTALL (让.匹配换行符)至关重要
+    )
+
+    a_route_match = a_route_pattern.search(html_content)
+    a_route_id = a_route_match.group(1) if a_route_match else None
+
+    if a_route_id:
+        print(f"✅ 成功匹配到 A线 ID: {a_route_id}")
+    else:
+        print("⚠️ 未能匹配到 A线 ID。")
+
     # 返回结构化数据
     return {
         "product_id": product_id,
+        "A_route_id": a_route_id,
         "route_ids": route_ids_list,
         "metadata": {
             "extracted_at": datetime.now().isoformat(),
