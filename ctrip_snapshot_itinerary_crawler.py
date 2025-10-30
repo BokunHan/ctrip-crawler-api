@@ -55,7 +55,7 @@ def extract_snapshot_itinerary(markdown_content, url):
 
     # 尝试提取title和sub_title
     for i, line in enumerate(lines):
-        title_match = re.match(r'^#\s+(.+)$', line)
+        title_match = re.match(r'^#\s+(.+?)(\!\[.*)?$', line)
         if title_match:
             data["title"] = title_match.group(1).strip()
             data["sub_title"] = lines[i+1].strip()

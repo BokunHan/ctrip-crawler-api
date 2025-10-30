@@ -42,7 +42,7 @@ def extract_route_ids_from_html(html_content, url=""):
     )
 
     a_route_match = a_route_pattern.search(html_content)
-    a_route_id = a_route_match.group(1) if a_route_match else None
+    a_route_id = a_route_match.group(1) if a_route_match else route_ids_list[0]
 
     if a_route_id:
         print(f"✅ 成功匹配到 A线 ID: {a_route_id}")
