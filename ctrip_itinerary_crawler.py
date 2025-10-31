@@ -479,6 +479,7 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
     remark_lines = []
     images = []
     duration_hours = 1  # 默认时长1小时
+    duration_minutes = 0
     
     # 查找后续行中的用餐时间信息
     i = index + 1
@@ -492,7 +493,7 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
         if re.match(r'^\d{2}:\d{2}\s*[·•]', line) or re.match(r'^(全天|上午|下午|晚上)\s*[·•]', line):
             break
 
-        if line.startswith("![](https://images4.c-ctrip.com"):
+        if line.startswith("![](") and "static" not in line:
             image_pattern = r'\((.*?)\)'
             image_urls = re.findall(image_pattern, line)
             images = [remove_size_params(url) for url in image_urls]
@@ -500,9 +501,11 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
             continue
             
         # 提取用餐时间
-        duration_match = re.search(r'用餐时间[:：]\s*约(\d+)小时', line)
+        duration_match = re.search(r'用餐时间[:：]\s*约(\d+)小时(?:\s*(\d+)分钟)?', line)
         if duration_match:
             duration_hours = float(duration_match.group(1))
+            if duration_match.group(2):
+                duration_minutes = int(duration_match.group(2))
             i += 1
             continue
 
@@ -536,7 +539,7 @@ def create_restaurant_activity(time_str, activity_type, extra_info, lines, index
         "time_type": "specific",
         "time_start_time": time_str,
         "time_duration_hours": duration_hours,
-        "time_duration_minutes": 0,
+        "time_duration_minutes": duration_minutes,
         "time_period": None,
         "time_remark": None,
         "driving_distance": 0,
@@ -639,6 +642,7 @@ def create_scenic_activity(time_str, activity_type, lines, index):
     scenic_spots = []
     content = activity_type
     duration_hours = 2  # 默认时长2小时
+    duration_minutes = 0
     remark = ""
     remark_lines = []
     
@@ -655,9 +659,11 @@ def create_scenic_activity(time_str, activity_type, lines, index):
             break
         
         # 提取活动时间
-        duration_match = re.search(r'活动时间[:：]\s*约(\d+)小时', line)
+        duration_match = re.search(r'活动时间[:：]\s*约(\d+)小时(?:\s*(\d+)分钟)?', line)
         if duration_match:
             duration_hours = float(duration_match.group(1))
+            if duration_match.group(2):
+                duration_minutes = int(duration_match.group(2))
             break
             
         duration_match2 = re.search(r'活动时间[:：]\s*约(\d+)分钟', line)
@@ -722,7 +728,7 @@ def create_scenic_activity(time_str, activity_type, lines, index):
         "time_type": "specific",
         "time_start_time": time_str,
         "time_duration_hours": duration_hours,
-        "time_duration_minutes": 0,
+        "time_duration_minutes": duration_minutes,
         "time_period": None,
         "time_remark": None,
         "driving_distance": 0,
@@ -817,11 +823,13 @@ def create_hotel_activity(time_str, activity_type, day_title, lines, index):
                 hotel_image = image_url
 
         elif re.match(r'^.+型酒店$', line) and len(line) < 10:
-            hotel_name = lines[i - 1][:-2].strip()
+            hotel_name_raw = lines[i - 1].strip()
+            junk_pattern = r'[^\u4e00-\u9fa5a-zA-Z0-9]+$'
+            hotel_name = re.sub(junk_pattern, '', hotel_name_raw)
 
         # 检查是否是自选酒店提示
-        elif "自选酒店" in line:
-            hotel_name = "自选酒店"
+        # elif "自选酒店" in line:
+        #     hotel_name = "自选酒店"
         
         # 检查是否是酒店名称（带有">"符号的行通常是酒店名称）
         # elif ">" in line and not line.startswith("!["):
@@ -867,7 +875,7 @@ def create_hotel_activity(time_str, activity_type, day_title, lines, index):
             alternative_hotels.append(alt_hotel)
         
         # 提取酒店备注
-        elif "温馨提示" in line or "注意" in line or "**" in line:
+        elif len(line) > 20:
             # 使用原来的方法提取备注，但过滤掉DAY之后的文字
             full_remark = line
             
