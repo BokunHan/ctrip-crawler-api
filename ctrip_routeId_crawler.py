@@ -21,9 +21,12 @@ def extract_route_ids_from_html(html_content, url=""):
     # 查找所有匹配的ID
     # S使用 set 来自动去重
     route_ids = set(route_id_pattern.findall(html_content))
+    if route_ids:
+        # 转换为列表
+        route_ids_list = list(route_ids)
+    else:
+        route_ids_list = [product_id]
 
-    # 转换为列表
-    route_ids_list = list(route_ids)
 
     print(f"✅ 提取完成！共找到 {len(route_ids_list)} 个不重复的 Route ID。")
 
