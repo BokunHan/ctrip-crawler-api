@@ -48,8 +48,8 @@ def extract_product_data_from_markdown(markdown_content):
     
     lines = markdown_content.split('\n')
 
-    for line in lines:
-        print(line)
+    # for line in lines:
+    #     print(line)
 
     # 1. 提取销售量、评分、评价数
     sales_count_pattern = r'已售(\d+)人'

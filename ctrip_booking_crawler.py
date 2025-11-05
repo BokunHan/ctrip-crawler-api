@@ -46,8 +46,8 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
     
     lines = markdown_content.split('\n')
 
-    for line in lines:
-        print(line)
+    # for line in lines:
+    #     print(line)
     
     # 1. 从URL中提取商品ID
     if url and 'productId=' in url:
@@ -81,20 +81,20 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
                     break
     
     # 2. 提取旅行社信息
-    for line in lines:
-        if '代理招徕' in line and '委托社' in line:
-            booking_data["travel_agency_info"]["claim"] = line.strip()
-
-            # 提取代理社
-            agent_match = re.search(r'由(.+?)代理招徕', line)
-            if agent_match:
-                booking_data["travel_agency_info"]["agent"] = agent_match.group(1)
-            
-            # 提取委托社
-            delegate_match = re.search(r'委托社为(.+?)，', line)
-            if delegate_match:
-                booking_data["travel_agency_info"]["delegate"] = delegate_match.group(1)
-            break
+    # for line in lines:
+    #     if '代理招徕' in line and '委托社' in line:
+    #         booking_data["travel_agency_info"]["claim"] = line.strip()
+    #
+    #         # 提取代理社
+    #         agent_match = re.search(r'由(.+?)代理招徕', line)
+    #         if agent_match:
+    #             booking_data["travel_agency_info"]["agent"] = agent_match.group(1)
+    #
+    #         # 提取委托社
+    #         delegate_match = re.search(r'委托社为(.+?)，', line)
+    #         if delegate_match:
+    #             booking_data["travel_agency_info"]["delegate"] = delegate_match.group(1)
+    #         break
     
     # 3. 提取预订限制信息
     in_restrictions = False
@@ -102,24 +102,27 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
         if '预订限制' in line:
             in_restrictions = True
             continue
+
+        if '携程' in line or 'ctrip' in line:
+            continue
         
         if in_restrictions:
             if '年龄限制' in line:
                 # 查找年龄限制的详细内容
                 for j in range(i, min(i+5, len(lines))):
-                    if lines[j].strip() and not lines[j].startswith('---') and not lines[j].startswith('人群限制'):
+                    if '携程' not in line and 'ctrip' not in line and lines[j].strip() and not lines[j].startswith('---') and not lines[j].startswith('人群限制'):
                         booking_data["booking_restrictions"]["age_limit"] = lines[j].split('|')[1].strip()
                         break
             elif '人群限制' in line:
                 # 查找人群限制的详细内容
                 for j in range(i, min(i+5, len(lines))):
-                    if lines[j].strip() and not lines[j].startswith('---') and not lines[j].startswith('其他限制'):
+                    if '携程' not in line and 'ctrip' not in line and lines[j].strip() and not lines[j].startswith('---') and not lines[j].startswith('其他限制'):
                         booking_data["booking_restrictions"]["group_limit"] = lines[j].split('|')[1].strip()
                         break
             elif '其他限制' in line:
                 # 查找其他限制的详细内容
                 for j in range(i, min(i+5, len(lines))):
-                    if lines[j].strip() and not lines[j].startswith('---') and '入住政策' not in lines[j]:
+                    if '携程' not in line and 'ctrip' not in line and lines[j].strip() and not lines[j].startswith('---') and '入住政策' not in lines[j]:
                         booking_data["booking_restrictions"]["other_limit"] = lines[j].split('|')[1].strip()
                         break
             elif '入住政策' in line:
@@ -131,35 +134,38 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
         if '入住政策' in line:
             # 查找多人入住政策的详细内容
             for j in range(i+1, min(i+5, len(lines))):
-                if lines[j].strip() and not lines[j].startswith('---') and '成团说明' not in lines[j]:
+                if '携程' not in line and 'ctrip' not in line and lines[j].strip() and not lines[j].startswith('---') and '成团说明' not in lines[j]:
                     booking_data["accommodation_policy"]["multi_person"] = lines[j].split('|')[1].strip()
                     break
             break
     
     # 5. 提取成团说明 - 优化版本
     for i, line in enumerate(lines):
+        if '携程' in line or 'ctrip' in line:
+            continue
+
         if '成团说明' in line:
             if '|' in line:
                 # 表格格式：成团说明| 内容
                 parts = line.split('|')
-                if len(parts) > 1:
+                if '携程' not in line and 'ctrip' not in line and len(parts) > 1:
                     booking_data["group_info"]["group_description"] = parts[1].strip()
             else:
                 # 查找后续行的详细内容
                 for j in range(i+1, min(i+5, len(lines))):
-                    if lines[j].strip() and not lines[j].startswith('---') and '出团通知' not in lines[j]:
+                    if '携程' not in lines[j] and 'ctrip' not in lines[j] and lines[j].strip() and not lines[j].startswith('---') and '出团通知' not in lines[j]:
                         booking_data["group_info"]["group_description"] = lines[j].strip()
                         break
         elif '出团通知' in line:
             if '|' in line:
                 # 表格格式：出团通知| 内容
                 parts = line.split('|')
-                if len(parts) > 1:
+                if '携程' not in line and 'ctrip' not in line and len(parts) > 1:
                     booking_data["group_info"]["departure_notice"] = parts[1].strip()
             else:
                 # 查找后续行的详细内容
                 for j in range(i+1, min(i+5, len(lines))):
-                    if lines[j].strip() and not lines[j].startswith('---') and '预订及出行须知' not in lines[j]:
+                    if '携程' not in lines[j] and 'ctrip' not in lines[j] and  lines[j].strip() and not lines[j].startswith('---') and '预订及出行须知' not in lines[j]:
                         booking_data["group_info"]["departure_notice"] = lines[j].strip()
                         break
     
@@ -169,6 +175,9 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
         if '预订及出行须知' in line:
             in_requirements = True
             continue
+
+        if '携程' in line or 'ctrip' in line:
+            continue
         
         if in_requirements:
             if '违约条款' in line:
@@ -176,7 +185,7 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
                 break
             
             # 收集须知条目
-            if line.strip() and not line.startswith('*') and not line.startswith('#') and len(line.strip()) > 20:
+            if '携程' not in line and 'ctrip' not in line and line.strip() and not line.startswith('*') and not line.startswith('#') and len(line.strip()) > 20:
                 booking_data["booking_requirements"].append(line.strip())
     
     # 7. 提取违约条款
@@ -187,23 +196,26 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
         if '违约条款' in line:
             in_violation = True
             continue
+
+        if '携程' in line or 'ctrip' in line:
+            continue
         
         if in_violation:
             if '出行指南' in line:
                 in_violation = False
                 break
             
-            if '旅行社违约' in line:
+            if '携程' not in line and 'ctrip' not in line and '旅行社违约' in line:
                 current_violation_type = "agency"
                 booking_data["violation_terms"]["agency_violation"].append(line.split('：')[1].strip())
                 continue
-            elif '旅游者违约' in line:
+            elif '携程' not in line and 'ctrip' not in line and '旅游者违约' in line:
                 current_violation_type = "tourist"
                 booking_data["violation_terms"]["tourist_violation"].append(line.split('：')[1].strip())
                 continue
             
             # 收集违约条款内容
-            if line.strip() and not line.startswith('---') and not '行程前|' in line:
+            if '携程' not in line and 'ctrip' not in line and line.strip() and not line.startswith('---') and not '行程前|' in line:
                 if current_violation_type == "agency":
                     booking_data["violation_terms"]["agency_violation"].append(line.strip())
                 elif current_violation_type == "tourist":
@@ -215,6 +227,9 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
         if '出行指南' in line:
             in_guide = True
             continue
+
+        if '携程' in line or 'ctrip' in line:
+            continue
         
         if in_guide:
             if '保障提示' in line or '支付信息' in line:
@@ -222,7 +237,7 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
                 break
             
             # 收集出行指南条目
-            if line.strip() and len(line.strip()) > 10 and not line.startswith('*') and not line.startswith('#'):
+            if '携程' not in line and 'ctrip' not in line and line.strip() and len(line.strip()) > 10 and not line.startswith('*') and not line.startswith('#'):
                 booking_data["travel_guide"].append(line.strip())
     
     # 9. 提取安全提示（从出行指南中分离出安全相关内容）
@@ -242,57 +257,60 @@ def extract_booking_note_data_from_markdown(markdown_content, url=""):
             in_protection = True
             continue
 
+        if '携程' in line or 'ctrip' in line:
+            continue
+
         if in_protection:
             if '支付信息' in line:
                 in_protection = False
                 break
 
             # 收集出行指南条目
-            if line.strip() and len(line.strip()) > 10 and not line.startswith('*') and not line.startswith('#'):
+            if '携程' not in line and 'ctrip' not in line and line.strip() and len(line.strip()) > 10 and not line.startswith('*') and not line.startswith('#'):
                 booking_data["protection_tips"].append(line.strip())
     
     # 11. 提取支付信息
-    in_payment = False
-    for line in lines:
-        if '支付信息' in line:
-            in_payment = True
-            continue
-        
-        if in_payment:
-            if '常见支付问题' in line:
-                break
-            
-            # 提取支持的支付方式
-            if '支持' in line and ('现金' in line or '信用卡' in line or '网银' in line):
-                # 解析支付方式
-                payment_methods = []
-                if '现金' in line:
-                    payment_methods.append('现金')
-                if '信用卡' in line:
-                    payment_methods.append('信用卡')
-                if '网银' in line or '第三方' in line:
-                    payment_methods.append('网银/第三方')
-                if '礼品卡' in line:
-                    payment_methods.append('礼品卡')
-                if '储蓄卡' in line:
-                    payment_methods.append('储蓄卡')
-                if '现金余额' in line:
-                    payment_methods.append('现金余额')
-                if '拿去花' in line:
-                    payment_methods.append('拿去花')
-                
-                booking_data["payment_info"]["supported_methods"] = payment_methods
+    # in_payment = False
+    # for line in lines:
+    #     if '支付信息' in line:
+    #         in_payment = True
+    #         continue
+    #
+    #     if in_payment:
+    #         if '常见支付问题' in line:
+    #             break
+    #
+    #         # 提取支持的支付方式
+    #         if '支持' in line and ('现金' in line or '信用卡' in line or '网银' in line):
+    #             # 解析支付方式
+    #             payment_methods = []
+    #             if '现金' in line:
+    #                 payment_methods.append('现金')
+    #             if '信用卡' in line:
+    #                 payment_methods.append('信用卡')
+    #             if '网银' in line or '第三方' in line:
+    #                 payment_methods.append('网银/第三方')
+    #             if '礼品卡' in line:
+    #                 payment_methods.append('礼品卡')
+    #             if '储蓄卡' in line:
+    #                 payment_methods.append('储蓄卡')
+    #             if '现金余额' in line:
+    #                 payment_methods.append('现金余额')
+    #             if '拿去花' in line:
+    #                 payment_methods.append('拿去花')
+    #
+    #             booking_data["payment_info"]["supported_methods"] = payment_methods
     
     # 12. 提取支付说明
-    in_payment_notes = False
-    for line in lines:
-        if '常见支付问题' in line:
-            in_payment_notes = True
-            continue
-        
-        if in_payment_notes:
-            if line.strip() and len(line.strip()) > 10:
-                booking_data["payment_info"]["payment_notes"].append(line.strip().replace('_', ''))
+    # in_payment_notes = False
+    # for line in lines:
+    #     if '常见支付问题' in line:
+    #         in_payment_notes = True
+    #         continue
+    #
+    #     if in_payment_notes:
+    #         if line.strip() and len(line.strip()) > 10:
+    #             booking_data["payment_info"]["payment_notes"].append(line.strip().replace('_', ''))
     
     print(f"✅ 数据提取完成！")
     print(f"   - 商品ID: {booking_data['product_id']}")
