@@ -20,12 +20,12 @@ def extract_reviews_from_markdown(markdown_content, url=""):
     # 1. 初始化数据结构
     data = {
         "product_id": product_id,
-        "rating": 0.0,
-        "good_rate": "0",
+        "rating": 5.0,
+        "good_rate": "100",
         "rating_spec": {
-            "itinerary": "0",
-            "accommodation": "0",
-            "service": "0"
+            "itinerary": "5",
+            "accommodation": "5",
+            "service": "5"
         },
         "reviews": [],
         "metadata": {
@@ -33,6 +33,10 @@ def extract_reviews_from_markdown(markdown_content, url=""):
             "source_url": url
         }
     }
+
+    not_found_match = re.search(r'未找到相关点评', markdown_content)
+    if not_found_match:
+        return data
 
     # 2. 提取页面总评分
     # 5.0/5
@@ -214,6 +218,11 @@ async def crawl_and_extract_reviews(url):
         log_console=True,  # 打印JS控制台日志，方便调试
         js_code="""
             async function scrollToBottomUntilEnd() {
+                if (document.body.innerText.includes("未找到相关点评")) {
+                        console.log('--- JS SCRIPT: 找到 "未找到相关点评"。直接返回 ---');
+                        return;
+                    }
+                
                 console.log('--- JS SCRIPT: 开始滚动加载评论... ---');
                 let maxScrolls = 100;  // 最大滚动次数，防止无限循环
                 let scrollCount = 0;
